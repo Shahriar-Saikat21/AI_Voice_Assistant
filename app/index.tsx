@@ -20,7 +20,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { AudioRecorder, FileFormat, FilePreset } from "react-native-audio-api";
 
-import { transcribeAudio } from "../services/stt";
+import { transcribeAudio, preloadWhisper } from "../services/stt";
 import { type Message } from "../services/llm";
 import { StreamOrchestrator } from "../utils/streamOrchestrator";
 
@@ -59,6 +59,7 @@ export default function VoiceChat() {
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+
   const recorderRef = useRef<AudioRecorder | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const orchestratorRef = useRef<StreamOrchestrator | null>(null);
@@ -77,22 +78,31 @@ export default function VoiceChat() {
 
   // Init recorder
   useEffect(() => {
+    console.log("[App] Initializing AudioRecorder...");
     const recorder = new AudioRecorder();
     recorder.enableFileOutput({
       format: FileFormat.Wav,
       preset: FilePreset.Lossless,
     });
     recorder.onError((err) => {
+      console.error("[App] Recorder error:", err.message);
       setError(err.message);
       setAppState("idle");
     });
     recorderRef.current = recorder;
+    console.log("[App] AudioRecorder ready");
 
     return () => {
       if (recorder.isRecording()) {
         recorder.stop();
       }
     };
+  }, []);
+
+  // Preload Whisper model on startup
+  useEffect(() => {
+    console.log("[App] App mounted, preloading Whisper...");
+    preloadWhisper();
   }, []);
 
   // Animate orb based on state
@@ -205,23 +215,29 @@ export default function VoiceChat() {
 
   const startRecording = async () => {
     try {
+      console.log("[App] Requesting mic permission...");
       const hasPermission = await requestMicPermission();
       if (!hasPermission) {
+        console.warn("[App] Mic permission DENIED");
         Alert.alert(
           "Permission Denied",
           "Microphone access is required for voice chat"
         );
         return;
       }
+      console.log("[App] Mic permission granted");
 
       setError(null);
       setAppState("recording");
 
+      console.log("[App] Starting recording...");
       const result = recorderRef.current!.start();
       if (result.status !== "success") {
         throw new Error("Failed to start recording");
       }
+      console.log("[App] Recording STARTED");
     } catch (err: any) {
+      console.error("[App] Recording start FAILED:", err.message);
       setError(err.message);
       setAppState("idle");
     }
@@ -229,10 +245,13 @@ export default function VoiceChat() {
 
   const stopRecordingAndProcess = async () => {
     try {
+      console.log("[App] Stopping recording...");
       const result = recorderRef.current!.stop();
       const filePath = result.path;
+      console.log("[App] Recording stopped, path:", filePath);
 
       if (!filePath) {
+        console.warn("[App] No file path returned, aborting");
         setAppState("idle");
         return;
       }
@@ -242,9 +261,12 @@ export default function VoiceChat() {
       const fileUri = filePath.startsWith("file://")
         ? filePath
         : `file://${filePath}`;
+      console.log("[App] Starting STT for:", fileUri);
       const transcript = await transcribeAudio(fileUri);
+      console.log(`[App] STT result: "${transcript}"`);
 
       if (!transcript.trim()) {
+        console.warn("[App] Empty transcript, returning to idle");
         setAppState("idle");
         return;
       }
@@ -256,6 +278,7 @@ export default function VoiceChat() {
         content: transcript,
       };
       setMessages((prev) => [...prev, userMsg]);
+      console.log("[App] User message added, starting LLM + TTS pipeline...");
 
       // --- Streaming LLM + Pipelined TTS ---
       setAppState("streaming");
@@ -297,14 +320,17 @@ export default function VoiceChat() {
       );
 
       orchestratorRef.current = orchestrator;
+      console.log("[App] Orchestrator launched");
       orchestrator.run(llmMessages);
     } catch (err: any) {
+      console.error("[App] Pipeline error:", err.message);
       setError(err.message);
       setAppState("idle");
     }
   };
 
   const cancelOrchestrator = () => {
+    console.log("[App] User cancelled orchestrator");
     if (orchestratorRef.current) {
       orchestratorRef.current.cancel();
       orchestratorRef.current = null;
@@ -323,6 +349,7 @@ export default function VoiceChat() {
   };
 
   const handleMicPress = () => {
+    console.log(`[App] Mic pressed — current state: ${appState}`);
     if (appState === "idle") {
       startRecording();
     } else if (appState === "recording") {

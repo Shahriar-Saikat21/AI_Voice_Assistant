@@ -59,10 +59,15 @@ function escapeXml(text: string): string {
 }
 
 export async function generateSpeech(text: string): Promise<ArrayBuffer> {
+  const startTime = Date.now();
+  console.log(`[TTS] Starting speech generation for: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+
   const connectionId = uuid();
   const requestId = uuid();
   const secMsGec = await generateSecMsGec();
   const muid = randomHex(16);
+
+  console.log("[TTS] Generated Sec-MS-GEC token, opening WebSocket...");
 
   const url =
     `${WSS_BASE}?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}` +
@@ -89,16 +94,20 @@ export async function generateSpeech(text: string): Promise<ArrayBuffer> {
 
     const audioChunks: Uint8Array[] = [];
     let done = false;
+    let chunkCount = 0;
 
     const timeout = setTimeout(() => {
       if (!done) {
         done = true;
         ws.close();
+        console.error("[TTS] TIMEOUT after 30s");
         reject(new Error("TTS timed out after 30s"));
       }
     }, 30000);
 
     ws.onopen = () => {
+      console.log(`[TTS] WebSocket connected in ${Date.now() - startTime}ms`);
+
       // Speech config
       ws.send(
         `Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n` +
@@ -127,6 +136,7 @@ export async function generateSpeech(text: string): Promise<ArrayBuffer> {
           `${escapeXml(text)}` +
           `</prosody></voice></speak>`,
       );
+      console.log("[TTS] SSML request sent");
     };
 
     ws.onmessage = (event: MessageEvent) => {
@@ -135,6 +145,7 @@ export async function generateSpeech(text: string): Promise<ArrayBuffer> {
           clearTimeout(timeout);
           done = true;
           ws.close();
+          console.log(`[TTS] Received turn.end — ${chunkCount} audio chunks`);
           finalize();
         }
       } else if (event.data instanceof ArrayBuffer) {
@@ -142,6 +153,7 @@ export async function generateSpeech(text: string): Promise<ArrayBuffer> {
         const headerLen = view.getUint16(0);
         const audioStart = 2 + headerLen;
         if (audioStart < event.data.byteLength) {
+          chunkCount++;
           audioChunks.push(new Uint8Array(event.data.slice(audioStart)));
         }
       }
@@ -151,6 +163,7 @@ export async function generateSpeech(text: string): Promise<ArrayBuffer> {
       clearTimeout(timeout);
       if (!done) {
         done = true;
+        console.error(`[TTS] WebSocket ERROR: ${err.message || "unknown"}`);
         reject(new Error(`TTS WebSocket error: ${err.message || "unknown"}`));
       }
     };
@@ -159,12 +172,14 @@ export async function generateSpeech(text: string): Promise<ArrayBuffer> {
       clearTimeout(timeout);
       if (!done) {
         done = true;
+        console.log("[TTS] WebSocket closed unexpectedly, finalizing...");
         finalize();
       }
     };
 
     function finalize() {
       if (audioChunks.length === 0) {
+        console.error("[TTS] FAILED — no audio data received");
         reject(new Error("TTS: no audio data received"));
         return;
       }
@@ -175,6 +190,7 @@ export async function generateSpeech(text: string): Promise<ArrayBuffer> {
         result.set(chunk, offset);
         offset += chunk.length;
       }
+      console.log(`[TTS] SUCCESS — ${(total / 1024).toFixed(1)}KB audio in ${Date.now() - startTime}ms`);
       resolve(result.buffer);
     }
   });

@@ -1,16 +1,16 @@
 module.exports = {
   expo: {
     name: "Saikat Voice Assistant",
-    slug: "uraanai",
+    slug: "saikatai",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
-    scheme: "uraanai",
+    scheme: "saikatai",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.magpieinc.uraanai",
+      bundleIdentifier: "com.saikatvoiceassistant.saikatai",
       infoPlist: {
         NSMicrophoneUsageDescription:
           "Uraan AI needs microphone access for voice chat",
@@ -25,7 +25,7 @@ module.exports = {
         backgroundColor: "#020618",
       },
       softwareKeyboardLayoutMode: "pan",
-      package: "com.magpieinc.uraanai",
+      package: "com.saikatvoiceassistant.saikatai",
       edgeToEdgeEnabled: true,
       permissions: ["android.permission.RECORD_AUDIO"],
     },
@@ -51,7 +51,7 @@ module.exports = {
     },
     extra: {
       eas: {
-        projectId: "6b4b9176-41d3-48aa-b44c-2d5bbc7635a7",
+        projectId: "2b94f4d2-3fdf-4886-966e-1c2a66c5c319",
       },
     },
   },
