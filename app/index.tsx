@@ -1,27 +1,27 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
+  Alert,
+  PermissionsAndroid,
+  Platform,
+  ScrollView,
   Text,
   TouchableOpacity,
-  ScrollView,
-  Platform,
-  PermissionsAndroid,
-  Alert,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { AudioRecorder, FileFormat, FilePreset } from "react-native-audio-api";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
   Easing,
   cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
 } from "react-native-reanimated";
-import { AudioRecorder, FileFormat, FilePreset } from "react-native-audio-api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { transcribeAudio, preloadWhisper } from "../services/stt";
 import { type Message } from "../services/llm";
+import { preloadWhisper, transcribeAudio } from "../services/stt";
 import { StreamOrchestrator } from "../utils/streamOrchestrator";
 
 type AppState =
@@ -58,7 +58,6 @@ export default function VoiceChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState<string | null>(null);
-
 
   const recorderRef = useRef<AudioRecorder | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -120,26 +119,26 @@ export default function VoiceChat() {
             easing: Easing.inOut(Easing.ease),
           }),
           -1,
-          true
+          true,
         );
         orbOpacity.value = withRepeat(
           withTiming(0.9, { duration: 600 }),
           -1,
-          true
+          true,
         );
         ringScale.value = withRepeat(
           withSequence(
             withTiming(1.6, { duration: 1000 }),
-            withTiming(1, { duration: 0 })
+            withTiming(1, { duration: 0 }),
           ),
-          -1
+          -1,
         );
         ringOpacity.value = withRepeat(
           withSequence(
             withTiming(0, { duration: 1000 }),
-            withTiming(0.4, { duration: 0 })
+            withTiming(0.4, { duration: 0 }),
           ),
-          -1
+          -1,
         );
         break;
 
@@ -150,7 +149,7 @@ export default function VoiceChat() {
             easing: Easing.inOut(Easing.ease),
           }),
           -1,
-          true
+          true,
         );
         orbOpacity.value = withTiming(0.8);
         ringOpacity.value = withTiming(0);
@@ -163,7 +162,7 @@ export default function VoiceChat() {
             easing: Easing.inOut(Easing.ease),
           }),
           -1,
-          true
+          true,
         );
         orbOpacity.value = withTiming(0.85);
         ringOpacity.value = withTiming(0);
@@ -173,7 +172,7 @@ export default function VoiceChat() {
         orbScale.value = withRepeat(
           withTiming(1.08, { duration: 800 }),
           -1,
-          true
+          true,
         );
         orbOpacity.value = withTiming(0.7);
         ringOpacity.value = withTiming(0);
@@ -203,10 +202,10 @@ export default function VoiceChat() {
         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
         {
           title: "Microphone Permission",
-          message: "Uraan AI needs your microphone for voice chat",
+          message: "Saikat AI needs your microphone for voice chat",
           buttonPositive: "Allow",
           buttonNegative: "Deny",
-        }
+        },
       );
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     }
@@ -221,7 +220,7 @@ export default function VoiceChat() {
         console.warn("[App] Mic permission DENIED");
         Alert.alert(
           "Permission Denied",
-          "Microphone access is required for voice chat"
+          "Microphone access is required for voice chat",
         );
         return;
       }
@@ -247,14 +246,15 @@ export default function VoiceChat() {
     try {
       console.log("[App] Stopping recording...");
       const result = recorderRef.current!.stop();
-      const filePath = result.path;
-      console.log("[App] Recording stopped, path:", filePath);
 
-      if (!filePath) {
-        console.warn("[App] No file path returned, aborting");
+      if (result.status !== "success") {
+        console.warn("[App] Recording stop failed:", result.message);
         setAppState("idle");
         return;
       }
+
+      const filePath = result.path;
+      console.log("[App] Recording stopped, path:", filePath);
 
       // --- STT ---
       setAppState("transcribing");
@@ -316,7 +316,7 @@ export default function VoiceChat() {
           setError(err.message);
           orchestratorRef.current = null;
           setAppState("idle");
-        }
+        },
       );
 
       orchestratorRef.current = orchestrator;
@@ -365,7 +365,7 @@ export default function VoiceChat() {
     <SafeAreaView className="flex-1 bg-[#020618]">
       {/* Header */}
       <View className="items-center pt-6 pb-2">
-        <Text className="text-white text-2xl font-bold">Uraan AI</Text>
+        <Text className="text-white text-2xl font-bold">Saikat AI</Text>
         <Text className="text-slate-500 text-sm mt-1">Voice Assistant</Text>
       </View>
 
@@ -378,15 +378,13 @@ export default function VoiceChat() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {messages.length === 0 &&
-          !streamingText &&
-          appState === "idle" && (
-            <View className="items-center mt-8">
-              <Text className="text-slate-600 text-base text-center">
-                Tap the microphone to start a conversation
-              </Text>
-            </View>
-          )}
+        {messages.length === 0 && !streamingText && appState === "idle" && (
+          <View className="items-center mt-8">
+            <Text className="text-slate-600 text-base text-center">
+              Tap the microphone to start a conversation
+            </Text>
+          </View>
+        )}
 
         {messages.map((msg) => (
           <View
@@ -408,7 +406,7 @@ export default function VoiceChat() {
               </Text>
             </View>
             <Text className="text-slate-600 text-xs mt-1">
-              {msg.role === "user" ? "You" : "Uraan AI"}
+              {msg.role === "user" ? "You" : "Saikat AI"}
             </Text>
           </View>
         ))}

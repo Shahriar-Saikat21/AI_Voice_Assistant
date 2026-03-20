@@ -1,4 +1,4 @@
-import { AudioContext } from "react-native-audio-api";
+import { AudioContext, GainNode } from "react-native-audio-api";
 
 export class AudioQueue {
   private ctx: AudioContext;
