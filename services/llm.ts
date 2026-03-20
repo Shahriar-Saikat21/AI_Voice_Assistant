@@ -9,7 +9,7 @@ export type Message = {
 const SYSTEM_PROMPT: Message = {
   role: "system",
   content:
-    "You are Uraan AI, a helpful voice assistant. Keep responses concise and conversational — typically 1-3 sentences. Speak naturally as in a conversation. Do not use markdown, bullet points, or formatting — just plain spoken language.",
+    "You are SAIKAT AI, a helpful voice assistant. Keep responses concise and conversational — typically 1-3 sentences. Speak naturally as in a conversation. Do not use markdown, bullet points, or formatting — just plain spoken language.",
 };
 
 // Non-streaming (kept for backward compat)
@@ -47,7 +47,7 @@ export async function chatCompletion(messages: Message[]): Promise<string> {
 // Streaming via SSE — yields tokens as they arrive
 export async function* chatCompletionStream(
   messages: Message[],
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): AsyncGenerator<string> {
   console.log("[LLM] Starting streaming completion...");
   console.log(`[LLM] Model: ${MODEL}`);
@@ -102,7 +102,9 @@ export async function* chatCompletionStream(
           if (!trimmed.startsWith("data: ")) continue;
           const data = trimmed.slice(6);
           if (data === "[DONE]") {
-            console.log(`[LLM] Stream DONE — ${tokenCount} tokens in ${Date.now() - startTime}ms (first token: ${firstTokenTime - startTime}ms)`);
+            console.log(
+              `[LLM] Stream DONE — ${tokenCount} tokens in ${Date.now() - startTime}ms (first token: ${firstTokenTime - startTime}ms)`,
+            );
             return;
           }
 
@@ -130,7 +132,9 @@ export async function* chatCompletionStream(
       if (!trimmed.startsWith("data: ")) continue;
       const data = trimmed.slice(6);
       if (data === "[DONE]") {
-        console.log(`[LLM] Fallback stream DONE — ${tokenCount} tokens in ${Date.now() - startTime}ms`);
+        console.log(
+          `[LLM] Fallback stream DONE — ${tokenCount} tokens in ${Date.now() - startTime}ms`,
+        );
         return;
       }
       try {
@@ -144,5 +148,7 @@ export async function* chatCompletionStream(
     }
   }
 
-  console.log(`[LLM] Stream ended — ${tokenCount} tokens in ${Date.now() - startTime}ms`);
+  console.log(
+    `[LLM] Stream ended — ${tokenCount} tokens in ${Date.now() - startTime}ms`,
+  );
 }

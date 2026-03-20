@@ -8,7 +8,7 @@ const SEC_MS_GEC_VERSION = `1-${CHROMIUM_FULL_VERSION}`;
 const WSS_BASE =
   "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
 const OUTPUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3";
-const VOICE = "en-US-EmmaMultilingualNeural";
+const VOICE = "en-US-JennyNeural";
 
 // Windows epoch offset (seconds between 1601-01-01 and 1970-01-01)
 const WIN_EPOCH = 11644473600;
@@ -132,7 +132,7 @@ export async function generateSpeech(text: string): Promise<ArrayBuffer> {
           `X-Timestamp:${new Date().toISOString()}\r\nPath:ssml\r\n\r\n` +
           `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>` +
           `<voice name='${VOICE}'>` +
-          `<prosody pitch='+0Hz' rate='+0%' volume='+0%'>` +
+          `<prosody pitch='+0Hz' rate='-5%' volume='+0%'>` +
           `${escapeXml(text)}` +
           `</prosody></voice></speak>`,
       );
